@@ -22,8 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Build tutorial site
         run: |
+          python -m pip install --disable-pip-version-check markdown
           python "04.教程/build_html.py"
           cp "06.Picture/Pinout_CX0001.png" "04.教程/assets/Pinout_CX0001.png"
       - uses: actions/upload-pages-artifact@v3
