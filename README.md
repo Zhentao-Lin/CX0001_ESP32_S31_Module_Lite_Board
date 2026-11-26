@@ -17,6 +17,7 @@
 ```powershell
 cd <仓库路径>\03.Sketch\01_GPIO_LED
 idf.py --preview set-target esp32s31
+idf.py --preview menuconfig
 idf.py --preview build
 idf.py --preview -p <COM口> flash monitor
 ```
