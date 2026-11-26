@@ -30,12 +30,25 @@ CHAPTERS: list[tuple[str, str]] = [
 ]
 
 
+def github_repo_link(rel: str) -> str | None:
+    """GitHub Pages only serves 04.教程; sketch paths must point at the Git repo."""
+    if not rel.startswith("../03.Sketch/"):
+        return None
+    repo_path = rel.removeprefix("../")
+    if repo_path.endswith((".c", ".h", ".cpp", ".txt", ".csv", ".yml", ".projbuild")):
+        return f"{GITHUB_REPO_URL}/blob/main/{repo_path}"
+    return f"{GITHUB_REPO_URL}/tree/main/{repo_path}"
+
+
 def rewrite_links(text: str) -> str:
-    """Point in-folder .md links at .html; keep repo paths as-is."""
+    """Point in-folder .md links at .html; map sketch paths to GitHub."""
     def sub_link(m: re.Match[str]) -> str:
         label, url = m.group(1), m.group(2)
         if url.startswith("http") or url.startswith("#"):
             return m.group(0)
+        gh = github_repo_link(url)
+        if gh:
+            return f"{label}]({gh})"
         if url.endswith(".md"):
             url = url[:-3] + ".html"
         return f"{label}]({url})"
@@ -131,7 +144,11 @@ def build_index() -> None:
             sketch = "—"
         else:
             sketch_name = Path(fname).stem
-            sketch = f'<a href="../03.Sketch/{html.escape(sketch_name)}">{html.escape(sketch_name)}</a>'
+            sketch_url = f"{GITHUB_REPO_URL}/tree/main/03.Sketch/{sketch_name}"
+            sketch = (
+                f'<a href="{html.escape(sketch_url)}" target="_blank" rel="noopener">'
+                f"{html.escape(sketch_name)}</a>"
+            )
         rows.append(
             f"<tr><td>{html.escape(short)}</td>"
             f'<td><a href="{html.escape(href)}">阅读 HTML</a></td>'

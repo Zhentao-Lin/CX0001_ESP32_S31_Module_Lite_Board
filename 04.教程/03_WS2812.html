@@ -21,7 +21,7 @@
 <main class="content">
 <article class="prose">
 <h1>03 · WS2812 板载 RGB</h1>
-<p><strong>示例工程</strong>：<a href="../03.Sketch/03_WS2812"><code>03.Sketch/03_WS2812</code></a></p>
+<p><strong>示例工程</strong>：<a href="https://github.com/Zhentao-Lin/CX0001_ESP32_S31_Module_Lite_Board/tree/main/03.Sketch/03_WS2812"><code>03.Sketch/03_WS2812</code></a></p>
 <p><code>led_strip</code> + RMT：红→绿→蓝→白→灭，300 ms/色，亮度 50/255。</p>
 <blockquote>
 <p><a href="00_开发环境.html">00_开发环境.md</a>。无串口。</p>
@@ -48,7 +48,7 @@ idf.py --preview -p &lt;COM口&gt; flash
 <h2>编程效果</h2>
 <p>RGB 按红绿蓝白灭循环，偏暗（约 20% 亮度）。</p>
 <h2>代码逐段讲解</h2>
-<p>源码：<a href="../03.Sketch/03_WS2812/main/ws2812_main.c"><code>main/ws2812_main.c</code></a>。</p>
+<p>源码：<a href="https://github.com/Zhentao-Lin/CX0001_ESP32_S31_Module_Lite_Board/blob/main/03.Sketch/03_WS2812/main/ws2812_main.c"><code>main/ws2812_main.c</code></a>。</p>
 <h3>1. Kconfig 与 <code>s_steps[]</code></h3>
 <p>宏来自 menuconfig；<code>s_steps[]</code> 为满幅 RGB（红绿蓝白灭）。<code>apply_brightness()</code> 做 <code>channel * WS2812_BRIGHTNESS / 255</code>，与 Arduino <code>setBrightness(50)</code> 一致。</p>
 <h3>2. <code>ws2812_init()</code></h3>

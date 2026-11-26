@@ -21,7 +21,7 @@
 <main class="content">
 <article class="prose">
 <h1>05 · 虚拟 U 盘（USB-OTG + Flash）</h1>
-<p><strong>示例工程</strong>：<a href="../03.Sketch/05_USB_MSC"><code>03.Sketch/05_USB_MSC</code></a></p>
+<p><strong>示例工程</strong>：<a href="https://github.com/Zhentao-Lin/CX0001_ESP32_S31_Module_Lite_Board/tree/main/03.Sketch/05_USB_MSC"><code>03.Sketch/05_USB_MSC</code></a></p>
 <p>TinyUSB MSC 将 Flash <code>fatfs</code> 分区暴露为 U 盘；PC 格式化为 FAT32 后读写。</p>
 <blockquote>
 <p><a href="00_开发环境.html">00_开发环境.md</a>。<strong>烧录口 Serial-JTAG，U 盘口 USB-OTG</strong>。</p>
@@ -80,7 +80,7 @@ idf.py --preview -p &lt;COM口&gt; flash monitor
 <li>安全弹出后掉电再上电，文件仍在。</li>
 </ol>
 <h2>代码逐段讲解</h2>
-<p>源码：<a href="../03.Sketch/05_USB_MSC/main/usb_msc_main.c"><code>main/usb_msc_main.c</code></a>。</p>
+<p>源码：<a href="https://github.com/Zhentao-Lin/CX0001_ESP32_S31_Module_Lite_Board/blob/main/03.Sketch/05_USB_MSC/main/usb_msc_main.c"><code>main/usb_msc_main.c</code></a>。</p>
 <h3>1. USB 描述符（<code>s_device_desc</code> / <code>s_msc_fs_config</code>）</h3>
 <p>向 PC 声明：Espressif VID、产品名 <strong>S31 Flash MSC</strong>、<strong>单一 MSC 接口</strong>、Bulk 端点 0x01/0x81、包长 64（全速）。设备类为 MISC + IAD，符合 TinyUSB 组合设备惯例。</p>
 <h3>2. <code>storage_init_spiflash(wl_handle)</code></h3>
