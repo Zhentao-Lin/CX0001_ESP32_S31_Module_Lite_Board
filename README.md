@@ -8,7 +8,7 @@
 
 ## 快速开始
 
-1. 阅读 **[04.教程/00_开发环境.md](04.教程/00_开发环境.md)**（或浏览器打开 **[04.教程/index.html](04.教程/index.html)**）：安装 VS Code、Espressif IDF 扩展与 ESP-IDF v6.1.1。
+1. 安装环境：阅读 **[04.教程/00_开发环境.md](04.教程/00_开发环境.md)**（GitHub 上渲染 Markdown）。**排版版教程**请点开 **[网页目录](https://zhentao-lin.github.io/CX0001_ESP32_S31_Module_Lite_Board/index.html)**（GitHub Pages）；本地克隆后也可用浏览器直接打开 `04.教程\index.html`（勿点仓库里的 `index.html` 链接，那会显示 HTML 源码）。
 2. 按下方 **教程索引** 从 01 章顺序学习到 09 章；每章对应 `03.Sketch` 下的独立工程。
 3. 工程路径请使用**纯 ASCII**（勿含中文/空格）；目标芯片 `esp32s31`，`idf.py` 需带 **`--preview`**。
 
@@ -51,7 +51,7 @@ idf.py --preview -p <COM口> flash monitor
 | [01.原理图](01.原理图/) | 原理图 PDF |
 | [02.PCB](02.PCB/) | PCB 资料 |
 | [03.Sketch](03.Sketch/) | ESP-IDF 示例工程（01～09） |
-| [04.教程](04.教程/) | 中文教程（[HTML 目录](04.教程/index.html) / `.md` 源文件） |
+| [04.教程](04.教程/) | 中文教程（[网页目录](https://zhentao-lin.github.io/CX0001_ESP32_S31_Module_Lite_Board/index.html) / [目录说明](04.教程/README.md) / `.md` 源文件） |
 | [05.Datasheet](05.Datasheet/) | 芯片 / 模组数据手册 |
 | [06.Picture](06.Picture/) | 板卡实物与引脚图 |
 

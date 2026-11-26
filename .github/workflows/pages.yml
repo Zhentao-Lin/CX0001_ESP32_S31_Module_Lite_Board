@@ -1,0 +1,33 @@
+name: Deploy tutorial Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build tutorial site
+        run: |
+          python "04.教程/build_html.py"
+          cp "06.Picture/Pinout_CX0001.png" "04.教程/assets/Pinout_CX0001.png"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: 04.教程
+      - uses: actions/deploy-pages@v4
+        id: deployment

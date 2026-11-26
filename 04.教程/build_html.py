@@ -11,6 +11,10 @@ import markdown
 from markdown.extensions.tables import TableExtension
 
 ROOT = Path(__file__).resolve().parent
+REPO_ROOT = ROOT.parent
+GITHUB_REPO_URL = "https://github.com/Zhentao-Lin/CX0001_ESP32_S31_Module_Lite_Board"
+PINOUT_SRC = REPO_ROOT / "06.Picture" / "Pinout_CX0001.png"
+PINOUT_ASSET = ROOT / "assets" / "Pinout_CX0001.png"
 
 CHAPTERS: list[tuple[str, str]] = [
     ("00_开发环境.md", "00 · 开发环境"),
@@ -64,7 +68,7 @@ def nav_html(prev_href: str | None, prev_label: str, next_href: str | None, next
     <div class="nav-prev">{prev}</div>
     <div class="nav-center">
       <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
-      <a class="nav-pill" href="../README.md">仓库说明</a>
+      <a class="nav-pill" href="{GITHUB_REPO_URL}">仓库说明</a>
     </div>
     <div class="nav-next">{nxt}</div>
   </div>
@@ -139,8 +143,8 @@ def build_index() -> None:
 <p>ESP-IDF <strong>v6.1.1</strong> · 目标芯片 <strong>esp32s31</strong>（<code>idf.py --preview</code>）</p>
 </div>
 <figure class="board-figure">
-<img src="../06.Picture/Pinout_CX0001.png" alt="CX0001 板卡引脚图" width="960" loading="lazy">
-<figcaption>引脚与外设对照 · 原图 <a href="../06.Picture/Pinout_CX0001.png">Pinout_CX0001.png</a></figcaption>
+<img src="assets/Pinout_CX0001.png" alt="CX0001 板卡引脚图" width="960" loading="lazy">
+<figcaption>引脚与外设对照 · 仓库原图见 <a href="{GITHUB_REPO_URL}/blob/main/06.Picture/Pinout_CX0001.png">Pinout_CX0001.png</a></figcaption>
 </figure>
 <h2>学习顺序</h2>
 <table>
@@ -190,8 +194,16 @@ def build_index() -> None:
     print("Wrote index.html")
 
 
-def main() -> None:
+def sync_assets() -> None:
     (ROOT / "assets").mkdir(exist_ok=True)
+    if PINOUT_SRC.is_file():
+        import shutil
+
+        shutil.copy2(PINOUT_SRC, PINOUT_ASSET)
+
+
+def main() -> None:
+    sync_assets()
     build_chapters()
     build_index()
 
