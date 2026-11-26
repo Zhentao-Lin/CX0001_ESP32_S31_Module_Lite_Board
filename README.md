@@ -2,6 +2,8 @@
 
 基于 **ESP32-S31**（片上 Wi-Fi 6 + 蓝牙 5.4 + USB-OTG + USB-Serial-JTAG）的精简开发板资料与 **ESP-IDF v6.1.1** 示例教程。
 
+**CX 产品教程站（总目录）：** [CX_Product_Tutorials](https://zhentao-lin.github.io/CX_Product_Tutorials/) → 产品 **CX0001 ESP32-S31 Module Lite**（概述 + 本章外链索引）。
+
 ![CX0001 板卡引脚图](06.Picture/Pinout_CX0001.png)
 
 排针编号、电源/地、USB 口与板载 LED / BOOT / WS2812 等外设 GPIO，见上图引脚图（原图：[06.Picture/Pinout_CX0001.png](06.Picture/Pinout_CX0001.png)）。下方 **板级引脚** 表为教程示例中常用的固定引脚。
