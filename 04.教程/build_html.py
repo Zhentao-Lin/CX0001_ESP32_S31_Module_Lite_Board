@@ -114,7 +114,7 @@ def wrap_page(title: str, body: str, prev: tuple[str, str] | None, nxt: tuple[st
 </article>
 </main>
 {nav}
-<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.0 教程（HTML 由 build_html.py 生成）</footer>
 </body>
 </html>
 """
@@ -157,7 +157,7 @@ def build_index() -> None:
 
     body = f"""<div class="index-hero">
 <h1>CX0001 ESP32-S31 开发教程</h1>
-<p>ESP-IDF <strong>v6.1.1</strong> · 目标芯片 <strong>esp32s31</strong>（<code>idf.py --preview</code>）</p>
+<p>ESP-IDF <strong>v6.1.0</strong> · 目标芯片 <strong>esp32s31</strong>（<code>idf.py --preview</code>）</p>
 </div>
 <figure class="board-figure">
 <img src="assets/Pinout_CX0001.png" alt="CX0001 板卡引脚图" width="960" loading="lazy">
@@ -204,7 +204,7 @@ def build_index() -> None:
 </article>
 </main>
 {nav}
-<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程</footer>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.0 教程</footer>
 </body>
 </html>"""
     (ROOT / "index.html").write_text(page, encoding="utf-8")

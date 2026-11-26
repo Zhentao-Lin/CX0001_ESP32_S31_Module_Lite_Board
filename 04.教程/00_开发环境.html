@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>00 · 开发环境：VS Code、ESP-IDF 插件与 ESP-IDF v6.1.1 — CX0001 教程</title>
+  <title>00 · 开发环境：VS Code、ESP-IDF 插件与 ESP-IDF v6.1.0 — CX0001 教程</title>
   <meta name="theme-color" content="#171b26">
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -20,13 +20,13 @@
 </nav>
 <main class="content">
 <article class="prose">
-<h1>00 · 开发环境：VS Code、ESP-IDF 插件与 ESP-IDF v6.1.1</h1>
+<h1>00 · 开发环境：VS Code、ESP-IDF 插件与 ESP-IDF v6.1.0</h1>
 <p>零基础按本章装好工具后，<strong>01～09 章共用同一套流程</strong>：打开对应章节目录 → 配置目标芯片 → 编译 → 烧录 → 观察现象 / 看日志。</p>
 <p><strong>下一章</strong>：<a href="01_GPIO_LED.html">01 · GPIO LED</a></p>
 <h2>本章目标</h2>
 <ul>
 <li>安装 <strong>Visual Studio Code</strong> 与乐鑫官方 <strong>ESP-IDF 扩展</strong>；</li>
-<li>通过扩展内置安装器部署 <strong>ESP-IDF v6.1.1</strong>（含工具链、Python 环境、<code>idf.py</code>）；</li>
+<li>通过扩展内置安装器部署 <strong>ESP-IDF v6.1.0</strong>（含工具链、Python 环境、<code>idf.py</code>）；</li>
 <li>把本仓库放到 <strong>纯 ASCII 路径</strong>，避免 Windows 下 cmake 因中文路径崩溃；</li>
 <li>识别板子 <strong>USB-Serial-JTAG</strong> 烧录口的 COM 号，并会用命令行或 VS Code 完成第一次编译、烧录。</li>
 </ul>
@@ -47,15 +47,15 @@
 <li>VS Code → <strong>扩展</strong>（<code>Ctrl+Shift+X</code>）。</li>
 <li>搜索 <strong>Espressif IDF</strong>（Espressif Systems）→ <strong>安装</strong>。</li>
 </ol>
-<h2>三、安装 ESP-IDF v6.1.1</h2>
+<h2>三、安装 ESP-IDF v6.1.0</h2>
 <ol>
 <li>命令面板（<code>Ctrl+Shift+P</code>）→ <strong><code>ESP-IDF: Configure ESP-IDF extension</code></strong>。</li>
 <li>选 <strong>Express</strong>。</li>
 <li><strong>安装路径不要选 C 盘</strong>（系统盘易空间不足、权限/杀软干扰多）。在向导里把 <strong>ESP-IDF</strong> 与 <strong>Tools</strong> 指到其他盘，例如：</li>
-<li>IDF：<code>D:\Espressif\frameworks\esp-idf-v6.1.1</code></li>
+<li>IDF：<code>D:\Espressif\frameworks\esp-idf-v6.1.0</code></li>
 <li>工具链：<code>D:\Espressif\tools</code><br>
    （盘符按你机器改成 <code>D:</code>、<code>E:</code> 等均可，保持路径无中文、无空格。）</li>
-<li>版本选 <strong>ESP-IDF v6.1.1</strong>（或同系列最新 6.1.x）。</li>
+<li>版本选 <strong>ESP-IDF v6.1.0</strong>（与套件及示例工程 <code>idf_component.yml</code> 中 <code>==6.1.0</code> 一致；勿混用 6.1.1）。</li>
 <li>等待下载完成 → <strong><code>ESP-IDF: Doctor command</code></strong> 确认无报错。</li>
 </ol>
 <p>已有本地 IDF 时选 <strong>Use existing setup</strong> 并指定 <code>IDF_PATH</code>。</p>
@@ -151,6 +151,6 @@ idf.py --preview -p &lt;COM口&gt; flash monitor
     <div class="nav-next"><a class="nav-pill" href="01_GPIO_LED.html">01 · GPIO LED →</a></div>
   </div>
 </nav>
-<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.0 教程（HTML 由 build_html.py 生成）</footer>
 </body>
 </html>

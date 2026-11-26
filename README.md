@@ -1,6 +1,6 @@
 # CX0001 ESP32-S31 Module Lite Board
 
-基于 **ESP32-S31**（片上 Wi-Fi 6 + 蓝牙 5.4 + USB-OTG + USB-Serial-JTAG）的精简开发板资料与 **ESP-IDF v6.1.1** 示例教程。
+基于 **ESP32-S31**（片上 Wi-Fi 6 + 蓝牙 5.4 + USB-OTG + USB-Serial-JTAG）的精简开发板资料与 **ESP-IDF v6.1.0** 示例教程。
 
 **CX 产品教程站（总目录）：** [CX_Product_Tutorials](https://zhentao-lin.github.io/CX_Product_Tutorials/) → 产品 **CX0001 ESP32-S31 Module Lite**（概述 + 本章外链索引）。
 
