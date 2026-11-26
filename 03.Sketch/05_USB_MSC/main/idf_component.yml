@@ -1,0 +1,10 @@
+## IDF Component Manager Manifest File
+# ESP32-S31 needs a TinyUSB that defines OPT_MCU_ESP32S31; the old P4 pin (esp_tinyusb 2.0.1~1
+# + TinyUSB 0.19.*) predates S31 support and fails to compile. Let the component manager resolve
+# the newest esp_tinyusb that is compatible with this SDK (==6.1.0); it pulls a matching TinyUSB
+# that supports the S31 USB-OTG port. The P4-era EP0 assert concern does not apply to S31.
+dependencies:
+  idf:
+    version: "==6.1.0"
+  espressif/esp_tinyusb:
+    version: "*"

@@ -1,0 +1,58 @@
+menu "Example Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config WS2812_GPIO
+        int "WS2812 data line GPIO number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 39
+        help
+            GPIO number (e.g. GPIO_NUM_39) the on-board WS2812 data line is connected to.
+
+            Default is 39, the WS2812 data pin of the CX-ESP32-S31 board.
+            Change it via 'idf.py menuconfig' if the LED chain is wired elsewhere.
+
+    config WS2812_LED_NUM
+        int "Number of WS2812 LEDs in the chain"
+        range 1 1024
+        default 1
+        help
+            Number of addressable RGB LEDs driven through the data line, i.e. the
+            number of pixels the driver keeps a buffer for (valid indices 0..N-1).
+
+            Default is 1: the CX-ESP32-S31 board carries a single on-board WS2812.
+            Set it to the length of your strip when an external chain is wired.
+
+    config WS2812_BRIGHTNESS
+        int "Brightness (0-255, 50 is about 20%)"
+        range 0 255
+        default 50
+        help
+            Brightness applied to every colour channel, on the same 0-255 scale as
+            Arduino's setBrightness(). 50 lights the LED at about 20% of full scale,
+            which is comfortable for a single on-board LED.
+
+    config WS2812_STEP_MS
+        int "Colour step duration (ms)"
+        range 1 10000
+        default 300
+        help
+            Time in milliseconds each colour (red / green / blue / white / off)
+            stays on before the next one is shown.
+
+            Default is 300 ms.
+
+    config WS2812_RMT_RES_HZ
+        int "RMT resolution (Hz)"
+        default 10000000
+        range 1000000 80000000
+        help
+            Resolution of the RMT channel used to generate the WS2812 waveform.
+
+            Default is 10000000 (10 MHz), i.e. 1 tick = 0.1 us, which encodes the
+            0.4 us / 0.8 us bit timing exactly. A lower resolution loses timing
+            accuracy and makes the LED flicker or show wrong colours.
+
+            Keep the default unless you know what the driver expects.
+
+endmenu

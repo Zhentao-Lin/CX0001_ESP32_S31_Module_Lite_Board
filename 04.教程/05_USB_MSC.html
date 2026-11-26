@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>05 · 虚拟 U 盘（USB-OTG + Flash） — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="04_USB_SERIAL.html">← 04 · USB 串口</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="06_BLE_UART.html">06 · BLE 透传 →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>05 · 虚拟 U 盘（USB-OTG + Flash）</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/05_USB_MSC"><code>03.Sketch/05_USB_MSC</code></a></p>
+<p>TinyUSB MSC 将 Flash <code>fatfs</code> 分区暴露为 U 盘；PC 格式化为 FAT32 后读写。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。<strong>烧录口 Serial-JTAG，U 盘口 USB-OTG</strong>。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>USB Device MSC；块大小 4096；FS 由主机维护；</li>
+<li><code>wl_mount</code> + <code>tinyusb_msc_new_storage_spiflash</code>；</li>
+<li><code>MOUNT_USB</code>：上电即交给主机。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>Flash <code>fatfs</code> 分区、USB-OTG 线。</li>
+</ul>
+<h2>介质参数</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>逻辑块</td>
+<td>4096 字节</td>
+</tr>
+<tr>
+<td>块数</td>
+<td>约 2506（≈9.79 MiB 可用）</td>
+</tr>
+<tr>
+<td>组件</td>
+<td><code>espressif/esp_tinyusb</code></td>
+</tr>
+</tbody>
+</table>
+<p>容量 2506 块 = 分区扇区 − WL 元数据（约 22 扇区），属正常。</p>
+<h2>工程配置</h2>
+<ol>
+<li>打开 <code>05_USB_MSC</code>，<code>set-target esp32s31</code>。</li>
+<li>首次 build 拉取 <code>esp_tinyusb</code>（联网）。</li>
+<li><code>partitions_16M.csv</code> 与 <code>CONFIG_PARTITION_TABLE_OFFSET=0xA000</code> 一致。</li>
+<li>menuconfig：TinyUSB <strong>Mass Storage</strong> 启用。</li>
+</ol>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash monitor
+</code></pre>
+<p>Monitor 接 Serial-JTAG；U 盘接 OTG → 日志 <code>USB MSC ready...</code> → PC 格式化 FAT32。</p>
+<h2>编程效果</h2>
+<ol>
+<li><code>Initialising wear levelling...</code>  </li>
+<li>电脑出现可移动磁盘；挂载日志 <code>Storage mounted to the USB host</code>；  </li>
+<li>周期状态 <code>owned by the USB host | 2506 blocks</code>；  </li>
+<li>安全弹出后掉电再上电，文件仍在。</li>
+</ol>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/05_USB_MSC/main/usb_msc_main.c"><code>main/usb_msc_main.c</code></a>。</p>
+<h3>1. USB 描述符（<code>s_device_desc</code> / <code>s_msc_fs_config</code>）</h3>
+<p>向 PC 声明：Espressif VID、产品名 <strong>S31 Flash MSC</strong>、<strong>单一 MSC 接口</strong>、Bulk 端点 0x01/0x81、包长 64（全速）。设备类为 MISC + IAD，符合 TinyUSB 组合设备惯例。</p>
+<h3>2. <code>storage_init_spiflash(wl_handle)</code></h3>
+<pre><code class="language-c">esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, NULL);
+wl_mount(data_partition, wl_handle);
+</code></pre>
+<p>在 <code>partitions_16M.csv</code> 里找 <strong>FAT 数据分区</strong>（标签常为 <code>fatfs</code>）。<code>wl_mount</code> 打开磨损均衡层，对上层表现为固定大小扇区（本板 <strong>4096 字节/扇区</strong>），主机 SCSI 读写的 LBA 经 WL 映射到真实 Flash。</p>
+<h3>3. <code>storage_event_cb</code></h3>
+<p>响应 <code>MOUNT_START</code> / <code>MOUNT_COMPLETE</code> / <code>MOUNT_FAILED</code> / <code>FORMAT_REQUIRED</code> 等。未格式化时 PC 会提示格式化；<strong>本示例不在设备端格式化</strong>，必须由用户在 PC 上选 <strong>FAT32</strong>。</p>
+<h3>4. <code>app_main</code> 初始化顺序（顺序不能乱）</h3>
+<ol>
+<li><strong><code>tinyusb_msc_install_driver</code></strong>：<code>auto_mount_off = 1</code> —— 主机弹出后不要让介质自动回到应用侧，否则 Windows 显示「请插入磁盘」。</li>
+<li><strong><code>storage_cfg.mount_point = TINYUSB_MSC_STORAGE_MOUNT_USB</code></strong>：上电即交给主机；<code>do_not_format = true</code> 防止误伤主机已写的 FAT。</li>
+<li><strong><code>tinyusb_msc_new_storage_spiflash</code></strong>：绑定 <code>wl_handle</code>。</li>
+<li><strong><code>tinyusb_driver_install</code></strong>：挂上自定义描述符，USB-OTG 口枚举为 U 盘。</li>
+</ol>
+<p>应用<strong>不</strong>在主机挂载期间读写该分区，避免破坏 FAT。</p>
+<h3>5. 主循环状态报告</h3>
+<p>每 5 s 查询 <code>tinyusb_msc_get_storage_mount_point</code> / <code>get_storage_capacity</code>，打印 <code>owned by the USB host | N blocks</code>（N 多为 <strong>2506</strong>）。仅归属或块数变化时打日志，避免刷屏。</p>
+<h2>常见问题</h2>
+<ul>
+<li>无盘：OTG 口、数据线、MSC 使能。</li>
+<li>「请插入磁盘」：在 PC 格式化为 FAT32。</li>
+<li>拔线前安全弹出。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="06_BLE_UART.html">06_BLE_UART.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="04_USB_SERIAL.html">← 04 · USB 串口</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="06_BLE_UART.html">06 · BLE 透传 →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

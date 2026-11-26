@@ -1,0 +1,7 @@
+## section 03 component dependencies. The `idf` entry pins the SDK itself: the component
+## manager refuses to configure the build when the active ESP-IDF is not exactly 6.1.0, so
+## the section is not accidentally compiled against a newer toolchain / driver behaviour.
+dependencies:
+  idf:
+    version: "==6.1.0"
+  espressif/led_strip: "^3.0.3"

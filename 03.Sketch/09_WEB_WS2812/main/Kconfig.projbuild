@@ -1,0 +1,50 @@
+menu "Wi-Fi station example"
+
+    config EXAMPLE_WIFI_SSID
+        string "Wi-Fi SSID"
+        default "myssid"
+        help
+            Name of the 2.4 GHz access point to join. The ESP32-S31 example uses the 2.4 GHz
+            band, so a 5 GHz-only SSID will never be found.
+
+    config EXAMPLE_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default "mypassword"
+        help
+            WPA2 passphrase. Leave empty for an open network; the example then lowers the
+            authentication threshold to WIFI_AUTH_OPEN.
+
+    config EXAMPLE_WIFI_MAX_RETRY
+        int "Maximum reconnect attempts"
+        range 1 20
+        default 5
+        help
+            How many times esp_wifi_connect() is retried after a disconnect before the example
+            gives up and reports failure.
+
+endmenu
+
+menu "WS2812 web example"
+
+    config EXAMPLE_WS2812_GPIO
+        int "WS2812 data GPIO"
+        default 39
+        help
+            GPIO number connected to the WS2812 DIN pin.
+
+    config EXAMPLE_WS2812_BRIGHTNESS
+        int "WS2812 brightness (0-255)"
+        range 0 255
+        default 50
+        help
+            LED brightness for each active colour channel. 50 ~ 20 %% of full on.
+
+    config EXAMPLE_HTTP_PORT
+        int "HTTP listen port"
+        default 80
+        help
+            TCP port the built-in HTTP server listens on. Default 80 lets a browser open
+            the board IP directly (http://<board-ip>). Change it (e.g. 8080) if port 80 is
+            taken or blocked on your network.
+
+endmenu

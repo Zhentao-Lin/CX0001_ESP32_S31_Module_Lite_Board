@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01 · GPIO 输出 - 板载 LED 闪烁 — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="00_开发环境.html">← 00 · 开发环境</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="02_GPIO_BUTTON.html">02 · GPIO 按键 →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>01 · GPIO 输出 - 板载 LED 闪烁</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/01_GPIO_LED"><code>03.Sketch/01_GPIO_LED</code></a></p>
+<p>用 ESP-IDF GPIO 驱动板载 LED（GPIO38）闪烁。</p>
+<blockquote>
+<p>先读 <a href="00_开发环境.html">00_开发环境.md</a>。01～03 <strong>无串口输出</strong>，只看 LED。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>板载 LED 引脚；GPIO 输出：复位 → 方向 → 电平；</li>
+<li>用 Kconfig 改引脚，便于换板。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>板载 LED（GPIO38，高电平亮）。</li>
+</ul>
+<h2>工程配置</h2>
+<ol>
+<li>VS Code 打开 <code>03.Sketch/01_GPIO_LED</code>。</li>
+<li>首次：<code>idf.py --preview set-target esp32s31</code>。</li>
+<li><code>sdkconfig.defaults</code>：esp32s31、16MB Flash/PSRAM、自定义分区表、<code>CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG</code>。</li>
+<li>可选 menuconfig → <strong>Example Configuration</strong>：<code>Blink GPIO</code>（38）、<code>Blink interval</code>（300 ms）。</li>
+</ol>
+<p>源码：<code>main/gpio_led_main.c</code>、<code>main/Kconfig.projbuild</code>。</p>
+<h2>编译与下载</h2>
+<p><strong>VS Code</strong>：选 COM 口 → Build → Flash（不必 Monitor）。</p>
+<p><strong>命令行</strong>：</p>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash
+</code></pre>
+<h2>编程效果</h2>
+<p>LED 每 <strong>0.3 s</strong> 亮灭一次；无串口日志。</p>
+<h2>代码逐段讲解</h2>
+<p>源码主文件：<a href="../03.Sketch/01_GPIO_LED/main/gpio_led_main.c"><code>main/gpio_led_main.c</code></a>。工程里还有 <code>main/Kconfig.projbuild</code>（生成 <code>CONFIG_BLINK_GPIO</code> / <code>CONFIG_BLINK_DELAY_MS</code>）、<code>main/CMakeLists.txt</code>（把 <code>gpio_led_main.c</code> 编进 <code>main</code> 组件）。</p>
+<h3>1. 文件头与包含关系</h3>
+<pre><code class="language-c">#include &quot;freertos/FreeRTOS.h&quot;
+#include &quot;freertos/task.h&quot;
+#include &quot;esp_err.h&quot;
+#include &quot;driver/gpio.h&quot;
+</code></pre>
+<ul>
+<li><strong><code>freertos/FreeRTOS.h</code></strong>：FreeRTOS 内核类型与 <code>configTICK_RATE_HZ</code> 等配置。</li>
+<li><strong><code>freertos/task.h</code></strong>：任务 API；本节只用 <code>vTaskDelay()</code>，代码跑在默认的 <strong><code>app_main</code> 任务</strong>里（IDF 启动后自动创建）。</li>
+<li><strong><code>esp_err.h</code></strong>：<code>esp_err_t</code> 与 <strong><code>ESP_ERROR_CHECK</code></strong> 宏——若表达式非 <code>ESP_OK</code>，打印错误并 <strong><code>abort()</code></strong>，便于第一次在开发板上定位配置问题。</li>
+<li><strong><code>driver/gpio.h</code></strong>：通用 GPIO 驱动，与具体芯片引脚号无关。</li>
+</ul>
+<h3>2. Kconfig 宏（换板只改 menuconfig）</h3>
+<pre><code class="language-c">#define BLINK_GPIO  CONFIG_BLINK_GPIO
+#define BLINK_DELAY_MS  CONFIG_BLINK_DELAY_MS
+</code></pre>
+<p><code>CONFIG_BLINK_GPIO</code> 在 <code>Kconfig.projbuild</code> 里默认 <strong>38</strong>；编译时由 Kconfig 系统写入 <code>sdkconfig</code>，再变成 C 宏。改引脚不必动 <code>.c</code> 文件，只需 <strong>menuconfig → Example Configuration</strong>。</p>
+<h3>3. <code>app_main()</code> 执行顺序</h3>
+<p>IDF 上电流程：bootloader → 启动 <code>app_main</code>。本章没有自建任务，整个闪烁逻辑就在这一个函数里循环。</p>
+<p><strong>步骤 A · 复位引脚</strong></p>
+<pre><code class="language-c">ESP_ERROR_CHECK(gpio_reset_pin(BLINK_GPIO));
+</code></pre>
+<p>将该 GPIO 从其它外设（如有）上解开，恢复为可配置状态。换脚或换功能后建议总是先 <code>gpio_reset_pin</code>。</p>
+<p><strong>步骤 B · 设为输出</strong></p>
+<pre><code class="language-c">ESP_ERROR_CHECK(gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT));
+</code></pre>
+<p>推挽输出，可直接驱动 LED（本板已有限流）。未调用 <code>gpio_set_level</code> 前，引脚电平通常为默认低。</p>
+<p><strong>步骤 C · 死循环闪烁</strong></p>
+<pre><code class="language-c">while (1) {
+    ESP_ERROR_CHECK(gpio_set_level(BLINK_GPIO, 1));
+    vTaskDelay(BLINK_DELAY_MS / portTICK_PERIOD_MS);
+    ESP_ERROR_CHECK(gpio_set_level(BLINK_GPIO, 0));
+    vTaskDelay(BLINK_DELAY_MS / portTICK_PERIOD_MS);
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>语句</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gpio_set_level(..., 1)</code></td>
+<td>输出高；本板 LED <strong>高有效</strong></td>
+</tr>
+<tr>
+<td><code>gpio_set_level(..., 0)</code></td>
+<td>输出低，LED 灭</td>
+</tr>
+<tr>
+<td><code>vTaskDelay(n)</code></td>
+<td>当前任务休眠 <strong>n 个 tick</strong>；常见 <code>CONFIG_FREERTOS_HZ=1000</code> 时 1 tick=1 ms，300 ms 即 <code>300/portTICK_PERIOD_MS</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>while (1)</code> 不会把 CPU 占满：延时期间调度器会运行 <strong>IDLE</strong> 与其它任务。本章未使用 <code>ESP_LOGx</code>，因此串口无任何输出（04 章才正式用 USB 控制台）。</p>
+<h3>4. 与官方 <code>gpio</code> 例程的差异</h3>
+<p>改编自 <code>examples/peripherals/gpio</code> 的 blink：<strong>删除日志</strong>，只保留 GPIO 三步 + 循环；LED 引脚改为本板 <strong>GPIO38</strong>。</p>
+<h2>常见问题</h2>
+<ul>
+<li>LED 不亮：确认 GPIO38、烧录成功、按 RST。</li>
+<li>命令须带 <code>--preview</code>；路径勿含中文。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="02_GPIO_BUTTON.html">02_GPIO_BUTTON.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="00_开发环境.html">← 00 · 开发环境</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="02_GPIO_BUTTON.html">02 · GPIO 按键 →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

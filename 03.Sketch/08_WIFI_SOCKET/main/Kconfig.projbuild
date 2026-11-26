@@ -1,0 +1,92 @@
+menu "Wi-Fi station example"
+
+    config EXAMPLE_WIFI_SSID
+        string "Wi-Fi SSID"
+        default "myssid"
+        help
+            Name of the 2.4 GHz access point to join. The ESP32-C6 coprocessor has no 5 GHz
+            radio, so a 5 GHz-only SSID will never be found.
+
+    config EXAMPLE_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default "mypassword"
+        help
+            WPA2 passphrase. Leave empty for an open network; the example then lowers the
+            authentication threshold to WIFI_AUTH_OPEN.
+
+    config EXAMPLE_WIFI_MAX_RETRY
+        int "Maximum reconnect attempts"
+        range 1 20
+        default 5
+        help
+            How many times esp_wifi_connect() is retried after a disconnect before the example
+            gives up and reports failure.
+
+endmenu
+
+menu "Socket example"
+
+    choice EXAMPLE_SOCKET_MODE
+        prompt "Socket mode"
+        default EXAMPLE_SOCKET_MODE_TCP_SERVER
+        help
+            What the socket section does once the station has an IP:
+
+            - TCP server: the board listens on a TCP port and takes one peer at a time.
+            - TCP client: the board connects out to a remote IPv4 address and port.
+            - UDP echo:   the board answers every datagram back to its sender, and broadcasts
+              console traffic to every host on the LAN.
+
+            All three modes bridge the link with the USB-Serial/JTAG console: a line typed and
+            finished with Enter is sent to the peer, and whatever the peer sends is printed back
+            on the console as one log line. UDP keeps its echo on top of that, so a peer sees both
+            the echo of its own datagram and the broadcast console traffic.
+
+    config EXAMPLE_SOCKET_MODE_TCP_SERVER
+        bool "TCP server (console <-> peer, bidirectional)"
+    config EXAMPLE_SOCKET_MODE_TCP_CLIENT
+        bool "TCP client (console <-> peer, bidirectional)"
+    config EXAMPLE_SOCKET_MODE_UDP
+        bool "UDP echo server (echo each datagram back)"
+    endchoice
+
+    config EXAMPLE_TCP_PORT
+        int "TCP listen port"
+        depends on EXAMPLE_SOCKET_MODE_TCP_SERVER
+        default 3333
+        help
+            TCP port the board listens on for incoming connections.
+
+    config EXAMPLE_REMOTE_IP
+        string "Remote IPv4 address"
+        depends on EXAMPLE_SOCKET_MODE_TCP_CLIENT
+        default "192.168.1.100"
+        help
+            Dotted-quad address of the host running the remote socket server. The connection is
+            retried every 2 seconds until that address answers, so the server may be started after
+            the board has booted.
+
+            UDP mode does not use this field - it has no peer to dial, so console traffic goes to
+            the broadcast address instead.
+
+    config EXAMPLE_REMOTE_PORT
+        int "Remote / broadcast port"
+        depends on EXAMPLE_SOCKET_MODE_TCP_CLIENT || EXAMPLE_SOCKET_MODE_UDP
+        default 3333
+        help
+            In TCP client mode: the TCP port on the remote host to connect to.
+
+            In UDP mode: the destination port of the broadcast - every host on the LAN that
+            listens for datagrams on this port receives the lines typed on the console.
+
+    config EXAMPLE_UDP_PORT
+        int "UDP listen port"
+        depends on EXAMPLE_SOCKET_MODE_UDP
+        default 3334
+        help
+            UDP port the board binds. Each datagram received on it is sent back to its sender.
+            Console traffic leaves from this socket towards the broadcast port above, so the two
+            ports are independent: peers talk to the board on this one, the board talks to the
+            LAN on that one.
+
+endmenu

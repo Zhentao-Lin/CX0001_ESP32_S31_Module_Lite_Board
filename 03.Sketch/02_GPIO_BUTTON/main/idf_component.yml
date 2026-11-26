@@ -1,0 +1,8 @@
+## section 02 component dependencies. This example uses only built-in IDF components (GPIO /
+## interrupt), so no external managed component is required. The `idf` entry pins the SDK
+## itself: the component manager refuses to configure the build when the active ESP-IDF is not
+## exactly 6.1.0, so the section is not accidentally compiled against a newer toolchain /
+## driver behaviour.
+dependencies:
+  idf:
+    version: "==6.1.0"

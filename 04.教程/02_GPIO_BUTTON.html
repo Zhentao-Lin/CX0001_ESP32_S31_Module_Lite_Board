@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02 · GPIO 输入 - BOOT 按键 — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="01_GPIO_LED.html">← 01 · GPIO LED</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="03_WS2812.html">03 · WS2812 →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>02 · GPIO 输入 - BOOT 按键</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/02_GPIO_BUTTON"><code>03.Sketch/02_GPIO_BUTTON</code></a></p>
+<p>BOOT 键（GPIO61）下降沿中断 + 队列 + 任务内 5 ms 消抖，翻转 LED（GPIO38）。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。无串口输出。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li><code>gpio_config</code> 输入、上拉、负边沿中断；</li>
+<li><code>gpio_install_isr_service</code> / <code>gpio_isr_handler_add</code>；</li>
+<li>ISR 只投递队列；消抖在任务里 <code>vTaskDelay</code>。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>BOOT（GPIO61）、LED（GPIO38）。</li>
+</ul>
+<h2>工程配置</h2>
+<ol>
+<li>打开 <code>03.Sketch/02_GPIO_BUTTON</code>，<code>set-target esp32s31</code>。</li>
+<li>menuconfig → <strong>Example Configuration</strong>：<code>BUTTON_GPIO</code>（61）、<code>LED_GPIO</code>（38）。</li>
+</ol>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash
+</code></pre>
+<p>VS Code：Build → Flash。观察 LED 与按键。</p>
+<h2>编程效果</h2>
+<ul>
+<li>上电 LED 灭；</li>
+<li>每次有效按键 LED 翻转一次；</li>
+<li>长按不连发。</li>
+</ul>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/02_GPIO_BUTTON/main/gpio_button_main.c"><code>main/gpio_button_main.c</code></a>。</p>
+<p>本章在 01 章 GPIO 输出的基础上，加入 <strong>输入、中断、FreeRTOS 队列、任务内消抖</strong>。核心原则：<strong>ISR 里只做最短路径通知，凡需要延时的逻辑放到任务里</strong>。</p>
+<h3>1. 全局变量</h3>
+<pre><code class="language-c">static QueueHandle_t s_press_queue;
+static int s_led_level;
+static int64_t s_last_press_us;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s_press_queue</code></td>
+<td>深度 10 的队列，元素为 <code>uint32_t</code>，仅表示「发生过一次边沿」</td>
+</tr>
+<tr>
+<td><code>s_led_level</code></td>
+<td>软件记录 LED 亮灭；<strong>不要</strong>用 <code>gpio_get_level</code> 读自己刚写的输出脚（不可靠）</td>
+</tr>
+<tr>
+<td><code>s_last_press_us</code></td>
+<td>上次<strong>已确认有效</strong>按键的时刻（<code>esp_timer_get_time()</code>，单位 µs），用于时间窗消抖</td>
+</tr>
+</tbody>
+</table>
+<h3>2. 中断服务函数 <code>button_isr_handler</code></h3>
+<pre><code class="language-c">static void IRAM_ATTR button_isr_handler(void *arg)
+{
+    uint32_t event = 1;
+    xQueueSendFromISR(s_press_queue, &amp;event, NULL);
+}
+</code></pre>
+<ul>
+<li><strong><code>IRAM_ATTR</code></strong>：建议把 ISR 放在 IRAM，减少 flash cache miss 带来的中断延迟。</li>
+<li><strong>只投递队列</strong>：不 <code>printf</code>、不 <code>vTaskDelay</code>、不翻转 LED。</li>
+<li><code>xQueueSendFromISR</code>：从 ISR 向任务发数据的标准 API；第三个参数为 <code>NULL</code> 表示不请求立刻切换任务（也可传 <code>&amp;xHigherPriorityTaskWoken</code> 在需要时 <code>portYIELD_FROM_ISR</code>）。</li>
+</ul>
+<h3>3. <code>app_main</code> 初始化 LED</h3>
+<p>与 01 章相同顺序，且 <strong>默认灭灯</strong>：</p>
+<pre><code class="language-c">gpio_reset_pin(LED_GPIO);
+gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+gpio_set_level(LED_GPIO, 0);
+</code></pre>
+<h3>4. 配置 BOOT 键为「上拉输入 + 下降沿中断」</h3>
+<pre><code class="language-c">gpio_config_t io_conf = {
+    .pin_bit_mask = 1ULL &lt;&lt; BUTTON_GPIO,
+    .mode = GPIO_MODE_INPUT,
+    .pull_up_en = GPIO_PULLUP_ENABLE,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    .intr_type = GPIO_INTR_NEGEDGE,
+};
+gpio_config(&amp;io_conf);
+</code></pre>
+<ul>
+<li>本板 BOOT <strong>按下为低</strong>，未按为内部上拉高。</li>
+<li><strong><code>GPIO_INTR_NEGEDGE</code></strong>：只在 高→低 时进中断（一次按下一次边沿；长按不重复触发，除非有抖动产生多个下降沿）。</li>
+</ul>
+<p>注册中断：</p>
+<pre><code class="language-c">gpio_install_isr_service(0);
+gpio_isr_handler_add(BUTTON_GPIO, button_isr_handler, NULL);
+</code></pre>
+<p><code>gpio_install_isr_service</code> 整芯片一次即可；<code>0</code> 表示默认中断标志。</p>
+<h3>5. 主循环：从队列取事件并消抖</h3>
+<pre><code class="language-c">while (1) {
+    if (xQueueReceive(s_press_queue, &amp;event, portMAX_DELAY) == pdTRUE) {
+</code></pre>
+<p>阻塞等待 ISR 投递；无按键时任务休眠，不占 CPU。</p>
+<p><strong>第一层消抖（时间戳）</strong></p>
+<pre><code class="language-c">if (esp_timer_get_time() - s_last_press_us &lt; BUTTON_DEBOUNCE_MS * 1000) {
+    continue;
+}
+</code></pre>
+<p>距上次有效按下不足 <strong>5 ms</strong> 的边沿视为机械抖动附带边沿，丢弃。</p>
+<p><strong>第二层消抖（延时 + 回读）</strong></p>
+<pre><code class="language-c">vTaskDelay(pdMS_TO_TICKS(BUTTON_DEBOUNCE_MS));
+if (gpio_get_level(BUTTON_GPIO) != 0) {
+    continue;
+}
+</code></pre>
+<p>任务里才能 <code>vTaskDelay</code>。延时后若键已松开（读回高），说明是毛刺而非真实按压。</p>
+<p><strong>确认按下 → 翻转 LED</strong></p>
+<pre><code class="language-c">s_last_press_us = esp_timer_get_time();
+s_led_level = !s_led_level;
+gpio_set_level(LED_GPIO, s_led_level);
+</code></pre>
+<p>板上另有硬件消抖，软件 5 ms 是第二道防线，换键/换板仍可调节 <code>BUTTON_DEBOUNCE_MS</code>。</p>
+<h2>常见问题</h2>
+<ul>
+<li>无反应：GPIO61、复位退出下载模式。</li>
+<li>多触发：增大 <code>BUTTON_DEBOUNCE_MS</code>。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="03_WS2812.html">03_WS2812.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="01_GPIO_LED.html">← 01 · GPIO LED</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="03_WS2812.html">03 · WS2812 →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

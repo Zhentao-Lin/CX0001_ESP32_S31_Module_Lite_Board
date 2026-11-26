@@ -1,0 +1,7 @@
+## Section 09 (WIFI_SOCKET) component dependencies. ESP32-S31 has a native Wi-Fi 6 radio, so the
+## standard esp_wifi API comes from ESP-IDF itself: esp_wifi_remote / esp_hosted (which forwarded
+## the radio to an on-board ESP32-C6 over SDIO on the P4) are no longer needed. The sockets are
+## ordinary IDF lwIP sockets. The `idf` entry pins the SDK (ESP32-S31 is supported by v6.1.0).
+dependencies:
+  idf:
+    version: "==6.1.0"

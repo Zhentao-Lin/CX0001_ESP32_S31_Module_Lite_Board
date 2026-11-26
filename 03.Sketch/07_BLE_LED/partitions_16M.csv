@@ -1,0 +1,33 @@
+# Partition table for this ESP32-S31 board (16MB flash).
+#
+# Per-partition summary:
+#   nvs       0x0B000      72 KB  key-value store: Wi-Fi credentials, app settings, wear-levelled
+#   nvs_keys  0x1D000       4 KB  NVS encryption key block (fixed 4096 bytes); idle until enabled
+#   otadata   0x1E000       8 KB  OTA boot-slot selector, two redundant sectors
+#   app0      0x20000       3 MB  factory application slot (ota_0)
+#   app1      0x320000      3 MB  second OTA slot (ota_1)
+#   fatfs     0x620000  9.875 MB  FAT filesystem for logs / media / user files
+#
+# Design notes:
+# - Partition table offset is 0xA000, not the 0x8000 default: the bootloader starts at 0x2000
+#   (ESP32-S31 ROM layout) and CONFIG_ESP_SYSTEM_USE_FRAME_POINTER makes it about 26 KB,
+#   which no longer fits in the 24 KB window ending at 0x8000. 0xA000 gives it 32 KB.
+#   This offset must match CONFIG_PARTITION_TABLE_OFFSET in sdkconfig.
+# - No phy partition: ESP32-S31 has an on-chip radio; its PHY calibration is kept in
+#   calibration data in nvs / the application.
+# - No coredump partition: a snapshot rewrites flash on every panic, and a repeating fault
+#   (watchdog reboot loop) would wear the flash out. Panic logs plus
+#   CONFIG_ESP_SYSTEM_USE_FRAME_POINTER are enough to locate a crash.
+# - No padding gap: nvs is 72 KB (0x12000) instead of 64 KB so that otadata ends exactly on
+#   0x20000, the 64 KB boundary app0 has to start on. The spare 8 KB went into nvs.
+#
+# NOTE: trailing '#' comments after the flags column are NOT supported by gen_esp32part.py,
+# anything there is parsed as a flag and fails the build, so keep notes in this header.
+#
+# Name,    Type, SubType,  Offset,    Size,     Flags
+nvs,       data, nvs,      0xB000,    0x12000,
+nvs_keys,  data, nvs_keys, 0x1D000,   0x1000,
+otadata,   data, ota,      0x1E000,   0x2000,
+app0,      app,  ota_0,    0x20000,   0x300000,
+app1,      app,  ota_1,    0x320000,  0x300000,
+fatfs,     data, fat,      0x620000,  0x9E0000,

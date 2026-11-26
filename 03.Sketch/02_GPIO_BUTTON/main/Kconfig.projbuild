@@ -1,0 +1,25 @@
+menu "Example Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config BUTTON_GPIO
+        int "Button GPIO number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+        default 61
+        help
+            GPIO number to which the on-board BOOT key is connected.
+
+            Default is 61, the BOOT key of the CX-ESP32-S31 board.
+            The key shorts the pin to GND, so it is active low.
+            Change it via 'idf.py menuconfig' if the key is wired elsewhere.
+
+    config LED_GPIO
+        int "LED GPIO number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 38
+        help
+            GPIO number of the on-board LED, toggled on every valid press.
+
+            Default is 38, the on-board LED of the CX-ESP32-S31 board.
+
+endmenu

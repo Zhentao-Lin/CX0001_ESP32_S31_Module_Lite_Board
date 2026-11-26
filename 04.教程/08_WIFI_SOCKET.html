@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>08 · Wi-Fi 数据透传（TCP / UDP） — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="07_BLE_LED.html">← 07 · BLE 控灯</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="09_WEB_WS2812.html">09 · 网页控灯 →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>08 · Wi-Fi 数据透传（TCP / UDP）</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/08_WIFI_SOCKET"><code>03.Sketch/08_WIFI_SOCKET</code></a></p>
+<p>menuconfig <strong>三选一</strong>：TCP server / TCP client / UDP echo。<code>idf.py monitor</code> 窗口可敲一行发给对端。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。片上 <code>esp_wifi</code>；仅 <strong>2.4 GHz</strong>。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>TCP：<code>bind</code>/<code>listen</code>/<code>accept</code> 或 <code>connect</code> 重试；</li>
+<li>UDP：<code>recvfrom</code>/<code>sendto</code>、数据报边界；</li>
+<li>控制台 + socket <strong>多任务</strong>全双工；USB 串口驱动同第 04 章。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>2.4G 路由器、同网段 PC、USB-Serial-JTAG。</li>
+</ul>
+<h2>环境与 menuconfig</h2>
+<ul>
+<li><code>idf_component.yml</code> 无 <code>esp_hosted</code> / <code>esp_wifi_remote</code>。</li>
+<li><strong>Wi-Fi station example</strong>：SSID、密码。</li>
+<li><strong>Socket example</strong>：模式、端口（UDP 监听 <strong>3334</strong> 与广播 <strong>3333</strong> 勿相同）。</li>
+</ul>
+<p>默认端口：TCP 3333；UDP listen 3334 / broadcast 3333。</p>
+<h2>工程配置</h2>
+<ol>
+<li>打开 <code>03.Sketch/08_WIFI_SOCKET</code>，<code>set-target esp32s31</code>。</li>
+<li><code>idf.py --preview menuconfig</code> 填 Wi-Fi 与 Socket 模式。</li>
+<li>改模式后须重新 <strong>build</strong>。</li>
+</ol>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash monitor
+</code></pre>
+<p>记下日志 <strong><code>Got IP: &lt;板子IP&gt;</code></strong>。</p>
+<h3>对端联调（<code>&lt;ip&gt;</code> 为板子 IP）</h3>
+<pre><code class="language-bash"># TCP server：电脑连板子
+nc &lt;ip&gt; 3333
+</code></pre>
+<pre><code class="language-bash"># TCP client：电脑先监听
+nc -l 3333
+</code></pre>
+<pre><code class="language-python"># server.py — 板子 client 模式连到本机 3333
+import socket
+s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind((&quot;&quot;, 3333)); s.listen(1)
+c, addr = s.accept(); print(&quot;board from&quot;, addr)
+while True:
+    d = c.recv(256)
+    if not d: break
+    print(&quot;&lt;-&quot;, d.decode(errors=&quot;replace&quot;))
+    c.sendall(input(&quot;-&gt; &quot;).encode() + b&quot;\n&quot;)
+</code></pre>
+<pre><code class="language-bash"># UDP 单包回显测试
+python -c &quot;import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.settimeout(3);s.sendto(b'ping',('&lt;ip&gt;',3334));print(s.recvfrom(1024))&quot;
+</code></pre>
+<h2>编程效果</h2>
+<p><strong>TCP server</strong> 典型日志：</p>
+<pre><code>I (o) wifi_socket: Got IP: 192.168.1.123
+I (o) wifi_socket: TCP server listening on port 3333
+I (o) wifi_socket: TCP peer connected from 192.168.1.50:52311
+I (o) wifi_socket: TCP RX 5 bytes: hello
+I (o) wifi_socket: Console -&gt; peer (5 bytes): world
+</code></pre>
+<p><strong>UDP</strong>：<code>UDP RX ... ping</code> 与 <code>Console -&gt; broadcast :3333</code>。</p>
+<p>monitor 里输入一行回车即发；收到内容以 <code>TCP RX</code> / <code>UDP RX</code> 一行打出。</p>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/08_WIFI_SOCKET/main/wifi_socket_main.c"><code>main/wifi_socket_main.c</code></a>。<strong>编译期</strong>由 menuconfig 三选一，未选中的 <code>#if</code> 块不会进固件。</p>
+<h3>1. Wi-Fi：<code>wifi_event_handler</code> + <code>wifi_start</code></h3>
+<ul>
+<li><code>STA_START</code> → <code>esp_wifi_connect()</code>。</li>
+<li><code>STA_DISCONNECTED</code> → 按 <code>CONFIG_EXAMPLE_WIFI_MAX_RETRY</code> 重连或置 <code>WIFI_FAIL_BIT</code>（日志带 <strong>reason</strong>）。</li>
+<li><code>GOT_IP</code> → 打印 IP/掩码/网关，置 <code>WIFI_CONNECTED_BIT</code>。</li>
+<li><code>wifi_start()</code> 创建默认 STA netif，填 SSID/密码（空密码则 <code>WIFI_AUTH_OPEN</code>），<code>EventGroupWaitBits</code> 等到连上或放弃。</li>
+</ul>
+<h3>2. 控制台 → 发送队列：<code>console_input_task</code></h3>
+<p>与 04 章类似：<strong>阻塞 <code>read(stdin)</code></strong>，不用 <code>select</code>（本文件包含 <code>lwip/sockets.h</code> 时 <code>select</code> 会变成 <strong><code>lwip_select</code></strong>，不认 stdin）。成行后 <code>xQueueSend(s_tx_queue, line, 0)</code>；队列深 <strong>8</strong>，满则丢行。设备端回显按键。</p>
+<h3>3. TCP 发送：<code>sock_tx_task</code> + <code>line_send</code></h3>
+<p>独立任务因为 <strong><code>recv</code> 在另一任务阻塞</strong>。<code>s_link_sock == -1</code> 时丢弃控制台行。<code>line_send</code> 循环 <code>send</code> 直至发完，再补发 <code>\\n</code> 方便对端 <code>nc</code> 显示。</p>
+<h3>4. TCP 接收：<code>tcp_rx_session</code> / <code>tcp_rx_publish</code></h3>
+<p><code>recv</code> 收到数据 → <code>to_printable</code>（非打印变 <code>.</code>，去掉 CR/LF）→ 打一条 <code>TCP RX</code>。<code>tcp_rx_publish</code> 在会话期间把 <code>s_link_sock</code> 交给发送任务。</p>
+<h3>5. TCP server 模式 <code>tcp_server_task</code></h3>
+<p><code>socket</code> → <code>SO_REUSEADDR</code> → <code>bind INADDR_ANY:TCP_PORT</code> → <code>listen(1)</code> → 循环 <code>accept</code> → <code>tcp_rx_publish(client)</code> → <code>close</code>。同一时刻只服务一个客户端。</p>
+<h3>6. TCP client 模式 <code>tcp_client_task</code></h3>
+<p><code>inet_pton</code> 解析 <strong>点分十进制</strong> <code>REMOTE_IP</code>（不支持主机名）；<code>connect</code> 失败每 <strong>2 s</strong> 重试；断链后同样 2 s 再连。</p>
+<h3>7. UDP 模式 <code>udp_bridge_task</code></h3>
+<ul>
+<li><code>bind</code> 监听 <code>UDP_PORT</code>；<code>SO_BROADCAST</code> 允许发往 <code>255.255.255.255:BCAST_PORT</code>。</li>
+<li><code>select</code> 100 ms：可读则 <code>recvfrom</code> → 日志 → <strong>单播</strong> <code>sendto</code> 回发送方（回显）。</li>
+<li>否则 Drain <code>s_tx_queue</code>，每行一个 <strong>广播</strong> 报文（含 <code>\\n</code> 在 payload 内，避免拆成两个报文）。</li>
+<li><strong>监听端口与广播端口必须不同</strong>（默认 3334 / 3333），否则自激。</li>
+</ul>
+<h3>8. <code>app_main</code> 任务拓扑</h3>
+<p><code>wifi_start</code> → USB 驱动 + VFS → <code>s_tx_queue</code> → <code>console_input_task</code>(prio 5) → UDP 时单任务 <code>udp_bridge</code>(6144 栈) <strong>或</strong> TCP 时 <code>sock_tx</code>(4) + <code>tcp_server/client</code>(4)。</p>
+<h2>常见问题</h2>
+<ul>
+<li>键盘无反应：USB Serial/JTAG 驱动 + VFS（同 04 章）。</li>
+<li>client 连不上：IP/端口、防火墙、对端未 listen。</li>
+<li>UDP 刷屏：两端口配成相同。</li>
+<li>Wi-Fi 失败：2.4G、SSID/密码、日志 <code>reason</code> 码。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="09_WEB_WS2812.html">09_WEB_WS2812.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="07_BLE_LED.html">← 07 · BLE 控灯</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="09_WEB_WS2812.html">09 · 网页控灯 →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

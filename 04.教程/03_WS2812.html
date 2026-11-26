@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>03 · WS2812 板载 RGB — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="02_GPIO_BUTTON.html">← 02 · GPIO 按键</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="04_USB_SERIAL.html">04 · USB 串口 →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>03 · WS2812 板载 RGB</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/03_WS2812"><code>03.Sketch/03_WS2812</code></a></p>
+<p><code>led_strip</code> + RMT：红→绿→蓝→白→灭，300 ms/色，亮度 50/255。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。无串口。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>WS2812 单线协议；<code>set_pixel</code> + <strong><code>refresh</code></strong>；</li>
+<li>GRB 顺序；亮度单独缩放。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>WS2812（GPIO39，1 颗）。</li>
+</ul>
+<h2>工程配置</h2>
+<ol>
+<li>打开 <code>03.Sketch/03_WS2812</code>，<code>set-target esp32s31</code>。</li>
+<li><code>idf_component.yml</code>：<code>espressif/led_strip ^3.0.3</code>，首次 build 需联网。</li>
+<li>menuconfig：<strong>Example Configuration</strong>（GPIO、颗数、亮度、RMT 10 MHz）。</li>
+</ol>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash
+</code></pre>
+<h2>编程效果</h2>
+<p>RGB 按红绿蓝白灭循环，偏暗（约 20% 亮度）。</p>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/03_WS2812/main/ws2812_main.c"><code>main/ws2812_main.c</code></a>。</p>
+<h3>1. Kconfig 与 <code>s_steps[]</code></h3>
+<p>宏来自 menuconfig；<code>s_steps[]</code> 为满幅 RGB（红绿蓝白灭）。<code>apply_brightness()</code> 做 <code>channel * WS2812_BRIGHTNESS / 255</code>，与 Arduino <code>setBrightness(50)</code> 一致。</p>
+<h3>2. <code>ws2812_init()</code></h3>
+<p><code>led_strip_config_t</code> 指定 GPIO、灯数、<code>LED_MODEL_WS2812</code>、<code>LED_STRIP_COLOR_COMPONENT_FMT_GRB</code>。<code>led_strip_rmt_config_t</code> 设 <code>resolution_hz = 10 MHz</code>（勿改低，否则 WS2812 时序错）。<code>led_strip_new_rmt_device()</code> 分配 RMT 并返回句柄。</p>
+<h3>3. <code>apply_brightness</code>（细节）</h3>
+<pre><code class="language-c">return (uint32_t)channel * WS2812_BRIGHTNESS / 255;
+</code></pre>
+<p>先按满幅写颜色表，再统一缩放到约 20% 通光；改 menuconfig 亮度无需改 <code>s_steps[]</code>。</p>
+<h3>4. 主循环三步</h3>
+<p>对每个 <code>s_steps[i]</code>：① <code>led_strip_set_pixel</code> 写缓冲；② <strong><code>led_strip_refresh</code></strong> 才推到数据线；③ <code>vTaskDelay(STEP_MS)</code>。多灯时对 <code>led=0..N-1</code> 循环 set_pixel，再一次 refresh。</p>
+<h2>常见问题</h2>
+<ul>
+<li>不亮：GPIO39；红蓝反了改 RGB 格式；勿降低 RMT 分辨率。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="04_USB_SERIAL.html">04_USB_SERIAL.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="02_GPIO_BUTTON.html">← 02 · GPIO 按键</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="04_USB_SERIAL.html">04 · USB 串口 →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>07 · BLE 控制 LED — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="06_BLE_UART.html">← 06 · BLE 透传</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="08_WIFI_SOCKET.html">08 · Wi-Fi Socket →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>07 · BLE 控制 LED</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/07_BLE_LED"><code>03.Sketch/07_BLE_LED</code></a></p>
+<p>自定义 GATT：写 <code>led_on</code> / <code>led_off</code> 控制 GPIO38；读/notify 状态。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>自定义 Service/Characteristic（0xFFE0 / 0xFFE1）；</li>
+<li>写回调解析命令并驱动 GPIO；</li>
+<li>READ + WRITE + NOTIFY。</li>
+</ul>
+<h2>关键参数</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>名</td>
+<td><code>S31-BLE-LED</code></td>
+</tr>
+<tr>
+<td>命令</td>
+<td><code>led_on</code> / <code>led_off</code>（ASCII）</td>
+</tr>
+<tr>
+<td>LED</td>
+<td>GPIO38 高有效</td>
+</tr>
+</tbody>
+</table>
+<h2>工程配置</h2>
+<p>打开 <code>07_BLE_LED</code>，<code>set-target esp32s31</code>；蓝牙 sdkconfig 同 06。</p>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash monitor
+</code></pre>
+<p>nRF Connect → <code>0xFFE1</code> 写文本 <code>led_on</code> / <code>led_off</code>。</p>
+<h2>编程效果</h2>
+<p>写 <code>led_on</code> → LED 亮，notify <code>0x01</code>；<code>led_off</code> → 灭，<code>0x00</code>。</p>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/07_BLE_LED/main/ble_led_main.c"><code>main/ble_led_main.c</code></a>。</p>
+<h3>1. GATT <code>0xFFE0</code> / <code>0xFFE1</code></h3>
+<p><code>led_access_cb</code> 处理 <strong>READ_CHR</strong> / <strong>WRITE_CHR</strong>。内部状态 <code>s_led_state</code> 0/1 与 GPIO 一致。</p>
+<h3>2. <code>led_parse_command</code> / <code>apply_led_state</code></h3>
+<p>严格长度 6/7 与字符串比较（大小写不敏感）。<code>apply_led_state</code>：<code>gpio_set_level(LED_GPIO, ...)</code>、打日志、若已连接则 <code>ble_gatts_notify_custom</code> 发 1 字节状态。</p>
+<h3>3. <code>led_access_cb</code> 分支</h3>
+<p>READ：<code>os_mbuf_append(&amp;s_led_state,1)</code>。WRITE：flat 到 <code>payload</code> → parse → <code>apply_led_state</code> 或忽略未知命令。</p>
+<h3>4. <code>ble_advertise</code></h3>
+<p>除设备名外可广播 <strong>16 位 UUID</strong>（<code>fields.uuids16</code>），手机扫描更易过滤。</p>
+<h3>5. <code>app_main</code></h3>
+<p><code>nvs</code> → <code>gpio_config</code> LED 输出默认灭 → <code>nimble_port_init</code> 与注册服务（同 06 骨架）→ <strong>无</strong> USB 控制台任务，仅 BLE 控灯。</p>
+<h2>常见问题</h2>
+<ul>
+<li>无动作：特征 0xFFE1、字符串命令、notify 订阅。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="08_WIFI_SOCKET.html">08_WIFI_SOCKET.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="06_BLE_UART.html">← 06 · BLE 透传</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="08_WIFI_SOCKET.html">08 · Wi-Fi Socket →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

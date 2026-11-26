@@ -1,0 +1,22 @@
+# ESP-IDF build artifacts
+**/build/
+**/.cache/
+
+# Generated Kconfig (use sdkconfig.defaults; avoid committing local Wi-Fi credentials)
+**/sdkconfig
+**/sdkconfig.old
+
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/

@@ -1,0 +1,15 @@
+menu "Example Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config LED_GPIO
+        int "LED GPIO number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 38
+        help
+            GPIO number of the on-board LED driven by the "led on" / "led off" commands.
+
+            Default is 38, the on-board LED of the CX-ESP32-S31 board.
+            Change it via 'idf.py menuconfig' if the LED is wired elsewhere.
+
+endmenu

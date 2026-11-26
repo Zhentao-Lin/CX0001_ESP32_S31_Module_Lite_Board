@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>06 · BLE 数据透传（NUS） — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="05_USB_MSC.html">← 05 · USB 虚拟U盘</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="07_BLE_LED.html">07 · BLE 控灯 →</a></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>06 · BLE 数据透传（NUS）</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/06_BLE_UART"><code>03.Sketch/06_BLE_UART</code></a></p>
+<p>Nordic UART Service：写 RX → 板子 notify TX 回显；串口打印 payload。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。片上 NimBLE，无 <code>esp_hosted</code>。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>GATT 服务/特征；WRITE 与 NOTIFY；</li>
+<li>NUS 128 位 UUID；UUID 放 scan response；</li>
+<li><code>nimble_port_init()</code> 起片上控制器。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>手机 + nRF Connect 等。</li>
+</ul>
+<h2>关键参数</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>名</td>
+<td><code>S31-BLE-UART</code></td>
+</tr>
+<tr>
+<td>服务</td>
+<td><code>6E400001-...-CCA9E</code></td>
+</tr>
+<tr>
+<td>RX / TX</td>
+<td><code>...0002...</code> / <code>...0003...</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>sdkconfig.defaults</code>：<code>BT_ENABLED</code>、<code>BT_NIMBLE_ENABLED</code>、<code>BT_CONTROLLER_ENABLED</code>。</p>
+<h2>工程配置</h2>
+<ol>
+<li>打开 <code>06_BLE_UART</code>，<code>set-target esp32s31</code>。</li>
+<li>一般无需 menuconfig 改蓝牙。</li>
+</ol>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash monitor
+</code></pre>
+<p>手机：连接 <code>S31-BLE-UART</code>，RX 写入，TX 开 notify。</p>
+<h2>编程效果</h2>
+<ol>
+<li><code>Advertising as "S31-BLE-UART"</code>  </li>
+<li>连接、<code>Subscribe ... notify=1</code>  </li>
+<li>写 <code>hello</code> → 手机与串口均见回显  </li>
+<li>断开后再广播</li>
+</ol>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/06_BLE_UART/main/ble_uart_main.c"><code>main/ble_uart_main.c</code></a>。</p>
+<h3>1. GATT 表 <code>s_gatt_svcs[]</code></h3>
+<p>NUS 三条 128 位 UUID（<code>BLE_UUID128_INIT</code> 小端字节序）。TX 特征：<code>BLE_GATT_CHR_F_NOTIFY</code>，注册后得到 <code>s_tx_val_handle</code>。RX 特征：<code>WRITE | WRITE_NO_RSP</code>，手机写入触发 <code>nus_access_cb</code>。</p>
+<h3>2. <code>nus_access_cb</code></h3>
+<p>仅处理 <code>BLE_GATT_ACCESS_OP_WRITE_CHR</code>：<code>ble_hs_mbuf_to_flat</code> 拷到 <code>payload</code> → <code>log_payload</code>（<code>68 65 6C... | hello</code>）→ <code>ble_hs_mbuf_from_flat</code> + <strong><code>ble_gatts_notify_custom(conn, s_tx_val_handle, om)</code></strong> 回显。手机须在 TX 上写 CCCD 订阅 notify。</p>
+<h3>3. <code>ble_send_to_phone</code> / <code>console_input_task</code></h3>
+<p><code>ble_send_to_phone</code> 检查 <code>s_conn_handle</code>，组 mbuf 后 notify。<code>console_input_task</code> 逻辑同 04 章 USB 行编辑，一行发送到手机（双向透传）。</p>
+<h3>4. <code>ble_advertise</code> / <code>gap_event_cb</code></h3>
+<p>主广播区放设备名；<strong>scan response</strong> 放 128 位 NUS UUID（否则 31 字节溢出）。<code>gap_event_cb</code> 维护连接句柄、断开重广播、<code>SUBSCRIBE</code> 时打 <code>notify=1</code> 日志。</p>
+<h3>5. <code>app_main</code></h3>
+<p><code>nvs_flash_init</code> → <strong><code>nimble_port_init()</code></strong>（ESP32-S31 片上 BT，勿走 esp_hosted）→ <code>ble_gatts_count_cfg</code> / <code>add_svcs</code> → <code>nimble_port_freertos_init(ble_host_task)</code> 跑 <code>nimble_port_run()</code> → USB 驱动 + <code>xTaskCreate(console_input_task, ..., 5, ...)</code>。</p>
+<h2>常见问题</h2>
+<ul>
+<li>搜不到：<code>BT_CONTROLLER_ENABLED</code>；看 Advertising 日志。</li>
+<li>无 notify：手机开 CCCD。</li>
+<li>MTU 23：长包拆分。</li>
+<li><code>ble_transport_to_ll_*</code>：删旧 <code>sdkconfig</code> 重 <code>set-target</code>。</li>
+</ul>
+<p><strong>下一章</strong>：<a href="07_BLE_LED.html">07_BLE_LED.md</a></p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="05_USB_MSC.html">← 05 · USB 虚拟U盘</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><a class="nav-pill" href="07_BLE_LED.html">07 · BLE 控灯 →</a></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

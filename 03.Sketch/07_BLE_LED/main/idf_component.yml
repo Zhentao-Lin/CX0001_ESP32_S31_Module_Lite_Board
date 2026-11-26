@@ -1,0 +1,5 @@
+## IDF Component Manager Manifest File
+dependencies:
+  # Pin the SDK so the section is not accidentally compiled against a newer ESP-IDF
+  idf:
+    version: "==6.1.0"

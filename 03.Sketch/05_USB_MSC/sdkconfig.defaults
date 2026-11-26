@@ -1,0 +1,28 @@
+# Default board baseline (ESP32-S31): target chip / Flash / PSRAM / custom partition table
+CONFIG_IDF_TARGET="esp32s31"
+
+# Flash 16MB (match the actual module capacity)
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
+# PSRAM (16MB on the S31 module; required for camera / network buffering)
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_USE_MALLOC=y
+
+# Custom partition table (see partitions_16M.csv: 2 x 3MB OTA app + 72KB nvs + 4KB nvs_keys + 9.875MB fatfs)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_16M.csv"
+# 0xA000 instead of the 0x8000 default: the bootloader starts at 0x2000 and can grow past
+# the 24 KB window ending at 0x8000; 0xA000 gives it 32 KB. partitions_16M.csv starts nvs at
+# 0xB000, right after the table, so keep this value in sync with the CSV.
+CONFIG_PARTITION_TABLE_OFFSET=0xA000
+
+# This section exposes the card through TinyUSB MSC
+CONFIG_TINYUSB_MSC_ENABLED=y
+
+# Long file names, so files copied from a PC keep their names
+CONFIG_FATFS_LFN_HEAP=y
+
+# Console output over the on-board USB-Serial/JTAG (S31 supports it: SOC_USB_SERIAL_JTAG).
+# Pin this in the defaults so a fullclean / sdkconfig regeneration does not fall back to
+# the UART console (GPIO 38/37), which is not the port the board exposes logs on.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

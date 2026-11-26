@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>09 · 网页控制 WS2812 — CX0001 教程</title>
+  <meta name="theme-color" content="#171b26">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="08_WIFI_SOCKET.html">← 08 · Wi-Fi Socket</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><span class="sep">—</span></div>
+  </div>
+</nav>
+<main class="content">
+<article class="prose">
+<h1>09 · 网页控制 WS2812</h1>
+<p><strong>示例工程</strong>：<a href="../03.Sketch/09_WEB_WS2812"><code>03.Sketch/09_WEB_WS2812</code></a></p>
+<p>Wi-Fi STA + <code>esp_http_server</code>：浏览器 <code>http://&lt;板子IP&gt;</code> 控颜色与亮度（GPIO39 WS2812）。</p>
+<blockquote>
+<p><a href="00_开发环境.html">00_开发环境.md</a>。</p>
+</blockquote>
+<h2>本节目标</h2>
+<ul>
+<li>静态页 + REST 风格 GET；</li>
+<li><code>/ctrl</code>、<code>/status</code> JSON；</li>
+<li>与 03 章相同的 <code>led_strip</code> 驱动。</li>
+</ul>
+<h2>用到的硬件</h2>
+<ul>
+<li>WS2812（GPIO39）、2.4G 路由器、手机/PC 浏览器。</li>
+</ul>
+<h2>工程配置</h2>
+<ol>
+<li>打开 <code>09_WEB_WS2812</code>，<code>set-target esp32s31</code>。</li>
+<li>menuconfig：</li>
+<li><strong>Wi-Fi station example</strong>（SSID/密码）；</li>
+<li><strong>WS2812 web example</strong>（GPIO、亮度、HTTP 端口，默认 80）。</li>
+<li><code>led_strip ^3.0.3</code>，首次 build 可拉组件。</li>
+</ol>
+<h2>编译与下载</h2>
+<pre><code class="language-powershell">idf.py --preview build
+idf.py --preview -p &lt;COM口&gt; flash monitor
+</code></pre>
+<p>日志：<code>Got IP: ... -&gt; open http://...</code>，同网段浏览器打开该 URL。</p>
+<h2>网页接口</h2>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code></td>
+<td>GET</td>
+<td>控制页</td>
+</tr>
+<tr>
+<td><code>/ctrl?color=&amp;brightness=</code></td>
+<td>GET</td>
+<td>设灯，返回 JSON</td>
+</tr>
+<tr>
+<td><code>/status</code></td>
+<td>GET</td>
+<td><code>{"color":"red","brightness":50}</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>color</code>：<code>red</code> / <code>green</code> / <code>blue</code> / <code>off</code>；<code>brightness</code>：0–255。</p>
+<h2>编程效果</h2>
+<ul>
+<li>点颜色按钮，灯变色，页内状态同步；</li>
+<li>滑块改亮度后点「应用」；</li>
+<li>多客户端每 2 s 轮询 <code>/status</code>。</li>
+</ul>
+<pre><code>I (o) ws2812_web: Got IP: 192.168.1.123 -&gt; open http://192.168.1.123
+I (o) ws2812_web: Web server ready on port 80
+I (o) ws2812_web: ctrl -&gt; color=red brightness=50
+</code></pre>
+<h2>代码逐段讲解</h2>
+<p>源码：<a href="../03.Sketch/09_WEB_WS2812/main/web_ws2812_main.c"><code>main/web_ws2812_main.c</code></a>。</p>
+<h3>1. <code>apply_state</code> / <code>color_from_name</code></h3>
+<p><code>switch(s_color)</code> 只点亮对应通道为 <code>s_brightness</code>。<code>color_from_name</code> 用 <code>strcasecmp</code> 识别 red/green/blue/off。</p>
+<h3>2. <code>INDEX_HTML</code> 与前端逻辑</h3>
+<p>内联 CSS 暗色主题；<code>send(color)</code> 拼 <code>/ctrl?brightness=&amp;color=</code>；<code>setInterval(...,2000)</code> 拉 <code>/status</code>；<code>show(d)</code> 更新按钮高亮与状态条。</p>
+<h3>3. <code>ctrl_get_handler</code> 细节</h3>
+<p>复制 query 到缓冲 → 可选解析 <code>color</code>、<code>brightness</code>（<code>strtol</code> 钳位 0–255）→ 任一变化则 <code>apply_state()</code> → 日志 <code>ctrl -&gt; color=...</code> → <strong>直接调用</strong> <code>status_get_handler</code> 把 JSON 作为响应（浏览器一次请求即得新状态）。</p>
+<h3>4. <code>start_web_server</code></h3>
+<p><code>config.server_port = HTTP_PORT</code>；<code>httpd_start</code> 后 <code>httpd_register_uri_handler</code> 注册 <code>/</code>、<code>/ctrl</code>、<code>/status</code>。</p>
+<h3>5. <code>app_main</code> 与 Wi-Fi</h3>
+<p><code>wifi_event_handler</code> 在 <code>GOT_IP</code> 打印 <code>open http://...</code>。失败连网则 return，不启 HTTP。灯在连网前已 <code>ws2812_init</code> 且 <code>apply_state</code> 灭灯。</p>
+<h2>常见问题</h2>
+<ul>
+<li>网页打不开：同网段、<code>http://</code> 非 <code>https</code>；可改端口 8080。</li>
+<li>灯不变：亮度为 0、GPIO 错误。</li>
+<li>颜色偏：GRB；Wi-Fi 见 08 章排查。</li>
+</ul>
+<hr>
+<p>教程完结。索引见仓库根目录 <a href="../README.html">README.md</a>。</p>
+</article>
+</main>
+<nav class="site-nav" aria-label="章节导航">
+  <div class="site-nav-inner">
+    <div class="nav-prev"><a class="nav-pill" href="08_WIFI_SOCKET.html">← 08 · Wi-Fi Socket</a></div>
+    <div class="nav-center">
+      <a class="nav-pill nav-pill-primary" href="index.html">教程目录</a>
+      <a class="nav-pill" href="../README.md">仓库说明</a>
+    </div>
+    <div class="nav-next"><span class="sep">—</span></div>
+  </div>
+</nav>
+<footer class="page-foot">CX0001 ESP32-S31 · ESP-IDF v6.1.1 教程（HTML 由 build_html.py 生成）</footer>
+</body>
+</html>

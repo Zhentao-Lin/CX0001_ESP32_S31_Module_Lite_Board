@@ -1,0 +1,33 @@
+# Default board baseline (ESP32-S31): target chip / Flash / PSRAM / custom partition table
+CONFIG_IDF_TARGET="esp32s31"
+
+# Flash 16MB (match the actual module capacity)
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
+# PSRAM (16MB on the S31 module; required for camera / LVGL / network buffering)
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_USE_MALLOC=y
+
+# Custom partition table (see partitions_16M.csv: 2 x 3MB OTA app + 72KB nvs + 4KB nvs_keys + 9.875MB fatfs)
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_16M.csv"
+# 0xA000 instead of the 0x8000 default: the frame-pointer backtrace grows the bootloader to
+# ~26 KB, which no longer fits in the 24 KB window 0x2000-0x8000. Keep this in sync with the
+# offsets in partitions_16M.csv (the first data partition starts right after the table).
+CONFIG_PARTITION_TABLE_OFFSET=0xA000
+
+# No flash coredump on purpose: a crash snapshot rewrites flash on every panic, and a repeatable
+# fault (watchdog reboot loop) would wear the flash out. Serial panic logs + frame pointer suffice.
+CONFIG_ESP_COREDUMP_ENABLE_TO_NONE=y
+
+# Panic readability: let the panic handler print a full backtrace from the CPU frame pointer,
+# and make a task watchdog timeout take the panic path (reboot) instead of only printing
+# registers every 5 seconds. ESP_BACKTRACING_METHOD is a choice, so NO_BACKTRACE (the default)
+# has to be switched off explicitly; costs slightly bigger/slower code.
+CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+# CONFIG_ESP_SYSTEM_NO_BACKTRACE is not set
+CONFIG_ESP_TASK_WDT_PANIC=y
+
+# Console output AND console input are routed to the on-board USB Serial/JTAG port,
+# so one USB-C cable covers flashing, logs and the command line (no USB-UART bridge).
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
