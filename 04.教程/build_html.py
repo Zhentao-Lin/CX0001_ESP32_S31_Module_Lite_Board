@@ -138,6 +138,10 @@ def build_index() -> None:
 <h1>CX0001 ESP32-S31 开发教程</h1>
 <p>ESP-IDF <strong>v6.1.1</strong> · 目标芯片 <strong>esp32s31</strong>（<code>idf.py --preview</code>）</p>
 </div>
+<figure class="board-figure">
+<img src="../06.Picture/Pinout_CX0001.png" alt="CX0001 板卡引脚图" width="960" loading="lazy">
+<figcaption>引脚与外设对照 · 原图 <a href="../06.Picture/Pinout_CX0001.png">Pinout_CX0001.png</a></figcaption>
+</figure>
 <h2>学习顺序</h2>
 <table>
 <thead><tr><th>章节</th><th>教程</th><th>示例工程</th></tr></thead>

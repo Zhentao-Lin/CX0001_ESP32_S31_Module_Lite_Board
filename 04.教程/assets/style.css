@@ -337,6 +337,31 @@ main.content .prose {
   margin: 0.35rem 0;
 }
 
+.prose img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.25rem auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.prose .board-figure {
+  margin: 0 0 2rem;
+  text-align: center;
+}
+
+.prose .board-figure img {
+  margin: 0 auto;
+}
+
+.prose figcaption {
+  margin-top: 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
 /* —— 目录页 —— */
 .index-hero {
   text-align: center;

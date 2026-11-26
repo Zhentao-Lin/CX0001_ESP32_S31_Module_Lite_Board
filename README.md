@@ -2,6 +2,10 @@
 
 基于 **ESP32-S31**（片上 Wi-Fi 6 + 蓝牙 5.4 + USB-OTG + USB-Serial-JTAG）的精简开发板资料与 **ESP-IDF v6.1.1** 示例教程。
 
+![CX0001 板卡引脚图](06.Picture/Pinout_CX0001.png)
+
+排针编号、电源/地、USB 口与板载 LED / BOOT / WS2812 等外设 GPIO，见上图引脚图（原图：[06.Picture/Pinout_CX0001.png](06.Picture/Pinout_CX0001.png)）。下方 **板级引脚** 表为教程示例中常用的固定引脚。
+
 ## 快速开始
 
 1. 阅读 **[04.教程/00_开发环境.md](04.教程/00_开发环境.md)**（或浏览器打开 **[04.教程/index.html](04.教程/index.html)**）：安装 VS Code、Espressif IDF 扩展与 ESP-IDF v6.1.1。
